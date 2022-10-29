@@ -15,7 +15,7 @@ def choose_file_name(url, post, session, album_size=1):
 	nb = base
 	while _get_matching(base=base, url=url, session=session):
 		idx += 1
-		base = "%s - %s" % (nb, idx)
+		base = f"{nb} - {idx}"
 	base = _add_album(url, base, album_size=album_size)
 	return base
 
@@ -24,10 +24,17 @@ def _get_matching(base, url, session):
 	if url.album_id:
 		aid = url.album_id
 		# Get matching bases, where they aren't from the same album.
-		return session.query(File).join(URL).filter(File.path.like(base+"%")).filter(URL.album_id != aid).first()
+		return (
+			session.query(File)
+			.join(URL)
+			.filter(File.path.like(f"{base}%"))
+			.filter(URL.album_id != aid)
+			.first()
+		)
+
 	else:
 		# Get any matching base, because this isn't an album file.
-		return session.query(File).filter(File.path.like(base+"%")).first()
+		return session.query(File).filter(File.path.like(f"{base}%")).first()
 
 
 def _choose_base_name(post):
@@ -56,7 +63,7 @@ def _choose_base_name(post):
 def _add_album(url, file_pattern, album_size):
 	if url.album_id is not None:
 		order = str(url.album_order).rjust(len(str(album_size)), '0')
-		file_pattern += '/%s' % order  # if this URL is an album file, the filename path turns into a dir.
+		file_pattern += f'/{order}'
 	return file_pattern
 
 
@@ -66,7 +73,7 @@ def _parse_pattern(string_in, inserts):
 	ret = []
 	open_brackets = 0
 	for c in string_in:
-		if c == '[' or c == ']':
+		if c in ['[', ']']:
 			if open_brackets and st['txt'].strip() and st['txt'].strip() in inserts and not st['txt'].startswith('_'):
 				st['txt'] = st['txt'].strip()
 				st['var'] = True
@@ -90,7 +97,7 @@ def _build_str(inserts, max_length=100):
 	ret = ''
 	for a in _pattern_array:
 		if a['var']:
-			ins = ''.join(_filename(str(inserts[a['txt']]))[0:max_length]).strip()
+			ins = ''.join(_filename(str(inserts[a['txt']]))[:max_length]).strip()
 			ret += ins
 		else:
 			ret += a['txt']
@@ -105,7 +112,5 @@ def _filename(f_name):
 		ret = pathvalidate.sanitize_filename(ret, '_').strip(' ./\\')
 	except Exception:
 		ret = '_'
-	if len(ret) == 0:
-		return '_'
-	return ret
+	return ret or '_'
 

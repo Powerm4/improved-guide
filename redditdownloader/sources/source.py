@@ -55,17 +55,11 @@ class Source:
 
 	def check_filters(self, ele):
 		""" Checks if the given RedditElement can pass this Source's filters. """
-		for fi in self.filters:
-			if not fi.check(ele):
-				return False
-		return True
+		return all(fi.check(ele) for fi in self.filters)
 
 	def get_settings_obj(self):
 		""" Builds an object of the Settings this Source needs. For WebUI use. """
-		obj = []
-		for _s in self.get_settings():
-			obj.append(_s.to_obj())
-		return obj
+		return [_s.to_obj() for _s in self.get_settings()]
 
 	def insert_data(self, key, val):
 		self.data[key] = val
@@ -101,9 +95,7 @@ class Source:
 		if for_webui:
 			out['settings'] = self.get_settings_obj()
 			out['description'] = self.description
-			out['filters'] = []
-			for fi in self.get_filters():
-				out['filters'].append(fi.to_js_obj())
+			out['filters'] = [fi.to_js_obj() for fi in self.get_filters()]
 		return out
 
 	def _load_filters(self, data):
@@ -113,4 +105,4 @@ class Source:
 		self.filters = filters.get_filters(data['filters'])
 
 	def __repr__(self):
-		return "(Source: %s :: %s)" % (self.type, self.get_config_summary())
+		return f"(Source: {self.type} :: {self.get_config_summary()})"

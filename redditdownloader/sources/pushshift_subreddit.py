@@ -34,10 +34,7 @@ class PushShiftSubmissionSource(source.Source):
 
 	def get_config_summary(self):
 		lim = self.data['limit']
-		if lim > 0:
-			lim = 'the first %s' % lim
-		else:
-			lim = 'all'
+		lim = f'the first {lim}' if lim > 0 else 'all'
 		return 'Downloading %s submissions from subreddit(s) "%s".' % (
 			lim, self.data['subreddit']
 		)
