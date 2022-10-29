@@ -5,7 +5,7 @@ import uuid
 
 
 _file = None
-_settings = dict()
+_settings = {}
 _default_cat = 'misc'
 
 
@@ -58,7 +58,7 @@ def load(filename):
 			converted = from_json(json_data.read())
 	except IOError:
 		return False
-	print('Loaded settings file [%s].' % filename)
+	print(f'Loaded settings file [{filename}].')
 	if converted:
 		print('\tHad to convert from older settings, so saving updated version!')
 		save()
@@ -68,20 +68,22 @@ def load(filename):
 def add(cat, st):
 	cat = cat.lower() if cat else _default_cat.lower()
 	if cat not in _settings:
-		_settings[cat] = dict()
+		_settings[cat] = {}
 	st.category = cat.lower()
 	_settings[cat][st.name] = st
 
 
 def get(key, full_obj=False, cat=None):
-	cat = cat if cat else _default_cat.lower()
+	cat = cat or _default_cat.lower()
 	if '.' in key:
 		cat = key.split('.')[0].lower()
 		key = key.split('.', 2)[1]
 	if cat in _settings and key in _settings[cat]:
 		rs = _settings[cat][key]
-		return rs.val() if not full_obj else rs
-	raise KeyError('The given setting (%s%s) does not exist!' % (cat+'.' if cat else '', key))
+		return rs if full_obj else rs.val()
+	raise KeyError(
+		f"The given setting ({f'{cat}.' if cat else ''}{key}) does not exist!"
+	)
 
 
 def put(key, value, cat=None, save_after=True):
@@ -92,10 +94,10 @@ def put(key, value, cat=None, save_after=True):
 
 
 def to_obj(save_format=False, include_private=True):
-	obj = dict()
+	obj = {}
 	for cat, sets in _settings.items():
 		if cat not in obj:
-			obj[cat] = [] if not save_format else {}
+			obj[cat] = {} if save_format else []
 		for key, opt in sets.items():
 			if not include_private and not opt.public:
 				continue
@@ -119,13 +121,10 @@ def get_sources():
 	return sources.load_sources(get('sources'))
 
 
-def has_source_alias(alias):  # !cover - no sources yet
+def has_source_alias(alias):	# !cover - no sources yet
 	""" Check if the given source alias exists. """
 	sources = get_sources()
-	for s in sources:
-		if s.get_alias() == alias:
-			return True
-	return False
+	return any(s.get_alias() == alias for s in sources)
 
 
 def add_source(new_source, prevent_duplicate=True, save_after=True):
@@ -165,9 +164,15 @@ class Setting(object):
 			val = self.opts[0][0]  # Default to first opt value, if opts are set.
 		val = self.attempt_convert(val)
 		if self.type not in val.__class__.__name__:
-			raise TypeError('Invalid type for setting [%s]! %s != %s' % (self.name, self.type, val.__class__.__name__))
+			raise TypeError(
+				f'Invalid type for setting [{self.name}]! {self.type} != {val.__class__.__name__}'
+			)
+
 		if self.opts and val not in [x[0] for x in self.opts]:
-			raise ValueError('Invalid value for setting [%s]! Value is not within given keys.' % val)
+			raise ValueError(
+				f'Invalid value for setting [{val}]! Value is not within given keys.'
+			)
+
 		self._value = val
 
 	def set_cat(self, cat):
@@ -185,10 +190,7 @@ class Setting(object):
 		return ret
 
 	def to_obj(self):
-		obj = {}
-		for k, v in vars(self).items():
-			if not k.startswith('_'):
-				obj[k] = v
+		obj = {k: v for k, v in vars(self).items() if not k.startswith('_')}
 		obj['value'] = self.val()
 		return obj
 
@@ -212,7 +214,15 @@ class Setting(object):
 # =========  DEFAULT SETTINGS  =========
 add("auth", Setting("refresh_token", '', desc="Use this to safely authorize RMD to read your Reddit account."))
 add("auth", Setting("rmd_client_key", 'v4XVrdEH_A-ZaA', desc="Change only if you know what you're doing.", public=False))
-add("auth", Setting("user_agent", 'RMD-Scanner-%s' % uuid.uuid4(), desc="The user agent to identify as, wherever possible."))
+add(
+	"auth",
+	Setting(
+		"user_agent",
+		f'RMD-Scanner-{uuid.uuid4()}',
+		desc="The user agent to identify as, wherever possible.",
+	),
+)
+
 add("auth", Setting("oauth_key", str(uuid.uuid4()), desc="Internal key.", public=False))
 
 add("output", Setting("base_dir", os.path.join(os.getcwd(), 'download'), desc="The base directory to save to. Cannot contain tags."))
@@ -242,8 +252,8 @@ add(None, Setting("sources", [{'alias': 'default-downloader', 'data': {}, 'filte
 
 def _adapt(obj):
 	""" Convert old versions of the Settings files up to the newest version. """
-	version = 1
 	converted = False
+	version = 1
 	if 'meta-version' in obj:
 		version = obj['meta-version']
 	elif _default_cat in obj and 'meta-version' in obj[_default_cat]:
@@ -252,8 +262,10 @@ def _adapt(obj):
 	max_version = get('meta-version')
 
 	if version > max_version:
-		raise ValueError('The loaded settings are on version %s, but this RMD build only supports up to %s!'
-						 'Please update RMD, or fix/delete your settings file.' % (version, max_version))
+		raise ValueError(
+			f'The loaded settings are on version {version}, but this RMD build only supports up to {max_version}!Please update RMD, or fix/delete your settings file.'
+		)
+
 
 	if version == 1:
 		# Version 1->2 saw addition of Sources & Filters.
@@ -308,8 +320,12 @@ def _adapt(obj):
 	if version == 4:
 		# Moved to SqlAlchemy and Multiprocessing.
 		obj['processing'] = {'deduplicate_files': obj['output']['deduplicate_files']}
-		obj['output']['file_name_pattern'] = \
-			('%s/%s' % (obj['output']['subdir_pattern'], obj['output']['file_name_pattern'])).replace('//', '/')
+		obj['output'][
+			'file_name_pattern'
+		] = f"{obj['output']['subdir_pattern']}/{obj['output']['file_name_pattern']}".replace(
+			'//', '/'
+		)
+
 		obj['output']['base_dir'] = os.path.abspath(obj['output']['base_dir'])
 		obj['threading']['console_clear_screen'] = obj['threading']['display_clear_screen']
 		obj['threading']['concurrent_downloads'] = obj['threading']['max_handler_threads']

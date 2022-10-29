@@ -16,7 +16,7 @@ class DirectURLSource(Source):
 		ps = PushshiftAPI()
 
 		if comment:
-			for post in ps.search_comments(ids=[comment.group(1)]):
+			for post in ps.search_comments(ids=[comment[1]]):
 				parents = list(ps.search_submissions(ids=post.link_id.replace('t3_', '', 1), limit=1))
 				if not len(parents):
 					raise AssertionError("PushShift Warning: Unable to locate direct parent Submission:", post.link_id)

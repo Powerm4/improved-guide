@@ -45,13 +45,12 @@ class Hash(sql.Base):  # TODO: Use this table.
 				file_id=file.id,
 				full_hash=hash_string
 			)
-		else:
-			sp = Hash.split_hash(hash_string)
-			return Hash(
-				file_id=file.id,
-				full_hash=hash_string,
-				p1=sp[0],
-				p2=sp[1],
-				p3=sp[2],
-				p4=sp[3],
-			)
+		sp = Hash.split_hash(hash_string)
+		return Hash(
+			file_id=file.id,
+			full_hash=hash_string,
+			p1=sp[0],
+			p2=sp[1],
+			p3=sp[2],
+			p4=sp[3],
+		)

@@ -39,10 +39,7 @@ class PushShiftUserSourceSource(source.Source):
 
 	def get_config_summary(self):
 		lim = self.data['limit']
-		if lim > 0:
-			lim = 'the first %s' % lim
-		else:
-			lim = 'all'
+		lim = f'the first {lim}' if lim > 0 else 'all'
 		return 'Downloading %s posts from user(s) "%s".' % (
 			lim, self.data['users']
 		)

@@ -59,7 +59,7 @@ def run():
 		print('All valid overridable settings:')
 		for _s in settings.get_all():
 			if _s.public:
-				print("%s.%s" % (_s.category, _s.name))
+				print(f"{_s.category}.{_s.name}")
 				print('\tDescription: %s' % _s.description)
 				if not _s.opts:
 					print('\tValid value: \n\t\tAny %s' % _s.type)
@@ -76,19 +76,15 @@ def run():
 		if '=' not in ua or '/comments/' in ua:
 			if '/comments/' in ua:
 				direct_sources.append(DirectURLSource(url=ua))
-				continue
-			elif 'r/' or 'u/' in ua:
-				direct_sources.append(DirectInputSource(txt=ua, args={'limit': args.limit}))
-				continue
 			else:
-				su.error("ERROR: Unkown argument: %s" % ua)
-				sys.exit(1)
+				direct_sources.append(DirectInputSource(txt=ua, args={'limit': args.limit}))
+			continue
 		k = ua.split('=')[0].strip('- ')
 		v = ua.split('=', 2)[1].strip()
 		try:
 			settings.put(k, v, save_after=False)
 		except KeyError:
-			print('Unknown setting: %s' % k)
+			print(f'Unknown setting: {k}')
 			sys.exit(50)
 
 	if args.source:
@@ -147,11 +143,10 @@ def run():
 			else:
 				code = qs['code'][0]
 				su.print_color('green', 'Got code. Authorizing account...')
-				refresh = praw_wrapper.get_refresh_token(code)
-				if refresh:
+				if refresh := praw_wrapper.get_refresh_token(code):
 					settings.put('auth.refresh_token', refresh)
 					usr = praw_wrapper.get_current_username()
-					su.print_color('cyan', 'Authorized to view account: %s' % usr)
+					su.print_color('cyan', f'Authorized to view account: {usr}')
 					su.print_color('green', 'Saved authorization token! Please restart RMD to begin downloading!')
 				else:
 					su.error('Failed to gain an account access token from Reddit with that code. Please try again.')
@@ -165,7 +160,7 @@ def run():
 
 	# Initialize Database
 	sql.init_from_settings()
-	print('Using manifest file [%s].' % sql.get_file_location())
+	print(f'Using manifest file [{sql.get_file_location()}].')
 
 	if direct_sources:
 		settings.disable_saving()
